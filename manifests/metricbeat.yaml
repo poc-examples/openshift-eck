@@ -146,9 +146,9 @@ spec:
           # When node activity is high
           resources:
             limits:
-              memory: 3Gi
-            requests:
               memory: 2Gi
+            requests:
+              memory: 1Gi
         dnsPolicy: ClusterFirstWithHostNet
         hostNetwork: true  # Provides richer host metadata
         terminationGracePeriodSeconds: 30
