@@ -7,20 +7,24 @@ metadata:
 spec:
   type: metricbeat
   version: 8.8.2
+  # Connection to ElasticSearch
   elasticsearchRef:
     name: elasticsearch
+  # Connection to Kibana
   kibanaRef:
     name: kibana
   config:
     metricbeat:
       autodiscover:
         providers:
+        # Provider for Kubernetes
         - type: kubernetes
           scope: cluster
           node: ${NODE_NAME}
           unique: true
           templates:
             - config:
+                # Kubernetes State metrics 
                 - module: kubernetes
                   hosts: ["https://kube-state-metrics.openshift-monitoring.svc:8443"]
                   bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
@@ -40,6 +44,10 @@ spec:
                     - state_cronjob
                     - state_resourcequota
                     - state_statefulset
+                    - event             # Track K8s events
+                    - scheduler         # Monitor K8s scheduler performance
+                    - controllermanager # Monitor K8s controller manager performance
+                # Kubernetes API Server metrics
                 - module: kubernetes
                   metricsets:
                     - apiserver
@@ -53,6 +61,7 @@ spec:
           node: ${NODE_NAME}
           type: kubernetes
       modules:
+      # System Metrics 
       - module: system
         period: 10s
         metricsets:
@@ -62,12 +71,15 @@ spec:
         - network
         - process
         - process_summary
+        - uptime            # Monitor system uptime
+        - diskio            # Track Disk I/O
         process:
           include_top_n:
             by_cpu: 5
             by_memory: 5
         processes:
         - .*
+      # Filesystem Metrics 
       - module: system
         period: 1m
         metricsets:
@@ -80,6 +92,7 @@ spec:
                 system:
                   filesystem:
                     mount_point: ^/(sys|cgroup|proc|dev|etc|host|lib)($|/)
+      # Kubernetes Node Metrics 
       - module: kubernetes
         period: 10s
         node: ${NODE_NAME}
@@ -97,13 +110,15 @@ spec:
         - container
         - volume
     processors:
-    - add_cloud_metadata: {}
+    - add_cloud_metadata:
+        providers: 
+          - azure
     - add_host_metadata: {}
   daemonSet:
     podTemplate:
       spec:
         serviceAccountName: metricbeat
-        automountServiceAccountToken: true # some older Beat versions are depending on this settings presence in k8s context
+        automountServiceAccountToken: true
         containers:
         - args:
           - -e
@@ -113,7 +128,7 @@ spec:
           name: metricbeat
           securityContext:
             runAsUser: 0
-            privileged: true # This is required to access kubelet API
+            privileged: true  # Necessary to access kubelet API
           volumeMounts:
           - mountPath: /hostfs/sys/fs/cgroup
             name: cgroup
@@ -126,14 +141,15 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          resources:
-            limits:
-              memory: 2Gi
-            requests:
-              cpu: 2
-              memory: 2Gi
+          # Resource Limits and Requests for the Metricbeat Pod
+          # resources:
+          #   limits:
+          #     memory: 2Gi
+          #   requests:
+          #     cpu: 500m
+          #     memory: 1Gi
         dnsPolicy: ClusterFirstWithHostNet
-        hostNetwork: true # Allows to provide richer host metadata
+        hostNetwork: true  # Provides richer host metadata
         terminationGracePeriodSeconds: 30
         volumes:
         - hostPath:

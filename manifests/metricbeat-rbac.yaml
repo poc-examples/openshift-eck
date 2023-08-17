@@ -37,9 +37,18 @@ rules:
   - statefulsets
   - deployments
   - replicasets
+  - daemonsets
   verbs:
   - get
   - list
+  - watch
+- apiGroups: 
+  - "batch"
+  resources:
+  - cronjobs
+  verbs:
+  - list
+  - get
   - watch
 - apiGroups:
   - ""
