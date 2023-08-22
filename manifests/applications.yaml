@@ -8,7 +8,7 @@ spec:
   version: 8.8.2
   nodeSets:
   - name: elastic-nodeset
-    count: 3
+    count: 3 # Number of Shards
     config:
       node.store.allow_mmap: false
     volumeClaimTemplates:
@@ -19,7 +19,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            storage: 50Gi   # Change this value to desired disk size
+            storage: 50Gi   # 50GB disk per shard seems to be optimum for performance as per elastic
 ---
 apiVersion: kibana.k8s.elastic.co/v1
 kind: Kibana
