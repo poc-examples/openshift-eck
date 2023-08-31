@@ -50,6 +50,10 @@ spec:
         terminationGracePeriodSeconds: 30
         dnsPolicy: ClusterFirstWithHostNet
         hostNetwork: true  # Use host network for richer metadata.
+        tolerations:
+          - key: "node-role.kubernetes.io/master"
+            operator: "Exists"
+            effect: "NoSchedule"
         containers:
         - name: filebeat
           securityContext:
