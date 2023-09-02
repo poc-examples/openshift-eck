@@ -47,6 +47,16 @@ spec:
                     - event             # Track K8s events
                     - scheduler         # Monitor K8s scheduler performance
                     - controllermanager # Monitor K8s controller manager performance
+                  processors:
+                    - add_kubernetes_metadata:
+                        in_cluster: true
+                        host: ${NODE_NAME}
+                        default_indexers.enabled: false
+                        default_matchers.enabled: false
+                    - drop_event:
+                        when:
+                          equals:
+                            kubernetes.labels.control-plane: "elastic-operator"
                 # Kubernetes API Server metrics
                 - module: kubernetes
                   metricsets:
@@ -55,6 +65,12 @@ spec:
                   bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
                   ssl.verification_mode: none
                   period: 30s
+                  processors:
+                    - add_kubernetes_metadata:
+                        in_cluster: true
+                        host: ${NODE_NAME}
+                        default_indexers.enabled: false
+                        default_matchers.enabled: false
         - hints:
             default_config: {}
             enabled: "true"
@@ -65,33 +81,52 @@ spec:
       - module: system
         period: 10s
         metricsets:
-        - cpu
-        - load
-        - memory
-        - network
-        - process
-        - process_summary
-        - uptime            # Monitor system uptime
-        - diskio            # Track Disk I/O
+          - cpu
+          - load
+          - memory
+          - network
+          - process
+          - process_summary
+          - uptime            # Monitor system uptime
+          - diskio            # Track Disk I/O
         process:
           include_top_n:
             by_cpu: 5
             by_memory: 5
         processes:
-        - .*
+          - .*
+        processors:
+          - add_kubernetes_metadata:
+              in_cluster: true
+              host: ${NODE_NAME}
+              default_indexers.enabled: false
+              default_matchers.enabled: false
+          - drop_event:
+              when:
+                equals:
+                  kubernetes.labels.control-plane: "elastic-operator"
       # Filesystem Metrics 
       - module: system
         period: 1m
         metricsets:
-        - filesystem
-        - fsstat
+          - filesystem
+          - fsstat
         processors:
-        - drop_event:
-            when:
-              regexp:
-                system:
-                  filesystem:
-                    mount_point: ^/(sys|cgroup|proc|dev|etc|host|lib)($|/)
+          - add_kubernetes_metadata:
+              in_cluster: true
+              host: ${NODE_NAME}
+              default_indexers.enabled: false
+              default_matchers.enabled: false
+          - drop_event:
+              when:
+                regexp:
+                  system:
+                    filesystem:
+                      mount_point: ^/(sys|cgroup|proc|dev|etc|host|lib)($|/)
+          - drop_event:
+              when:
+                equals:
+                  kubernetes.labels.control-plane: "elastic-operator"
       # Kubernetes Node Metrics 
       - module: kubernetes
         period: 10s
@@ -104,16 +139,26 @@ spec:
         ssl.certificate_authorities:
           - /run/secrets/kubernetes.io/serviceaccount/service-ca.crt
         metricsets:
-        - node
-        - system
-        - pod
-        - container
-        - volume
-    processors:
-    - add_cloud_metadata:
-        providers: 
-          - azure
-    - add_host_metadata: {}
+          - node
+          - system
+          - pod
+          - container
+          - volume
+        processors:
+          - add_kubernetes_metadata:
+              in_cluster: true
+              host: ${NODE_NAME}
+              default_indexers.enabled: false
+              default_matchers.enabled: false
+          - add_cloud_metadata:
+              providers: 
+                - azure
+          - add_host_metadata: {}
+          - drop_event:
+              when:
+                equals:
+                  kubernetes.labels.control-plane: "elastic-operator"
+
   daemonSet:
     podTemplate:
       spec:
